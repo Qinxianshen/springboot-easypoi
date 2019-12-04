@@ -4,14 +4,14 @@ package com.qin.easypoi.controller;
 import com.alibaba.fastjson.JSON;
 import com.qin.easypoi.service.ExportAndInportService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -40,6 +40,15 @@ public class ExportAndInportController {
             response.getWriter().println(JSON.toJSONString(map));
         }
         return null;
+    }
+
+    /*
+    *
+    * 导入复杂对象
+    * */
+    @PostMapping("/inportComplex")
+    public List<Map> inportBook(MultipartFile excel) throws Exception{
+        return  exportAndInportService.inportComplex(excel);
     }
 
 }

@@ -2,7 +2,10 @@ package com.qin.easypoi.service.Impl;
 
 
 import cn.afterturn.easypoi.excel.ExcelExportUtil;
+import cn.afterturn.easypoi.excel.ExcelImportUtil;
+import cn.afterturn.easypoi.excel.entity.ImportParams;
 import cn.afterturn.easypoi.excel.entity.TemplateExportParams;
+import cn.afterturn.easypoi.excel.entity.result.ExcelImportResult;
 import com.qin.easypoi.domain.DepenceModel;
 import com.qin.easypoi.domain.Detail;
 import com.qin.easypoi.domain.QinComplexObject;
@@ -16,15 +19,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ExportAndInportServiceImpl implements ExportAndInportService {
@@ -35,32 +36,32 @@ public class ExportAndInportServiceImpl implements ExportAndInportService {
                 "complexTemplate7.xlsx");
 
         QinComplexObject qinComplexObject = data1();
-        List<Map<String,Object>> maplist = data2();
-        List<Map<String,Object>> details = data3();
+        List<Map<String, Object>> maplist = data2();
+        List<Map<String, Object>> details = data3();
         StoageDatabase stoageDatabase = data4();
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("modelCnName", qinComplexObject.getModelCnName());
-        map.put("modelEnName",qinComplexObject.getModelEnName());
-        map.put("modelNumber",qinComplexObject.getModelNumber());
-        map.put("modelStuff",qinComplexObject.getModelStuff());
-        map.put("devStuff",qinComplexObject.getDevStuff());
-        map.put("modelState",qinComplexObject.getModelState());
-        map.put("mintime",qinComplexObject.getMintime());
-        map.put("minspace",qinComplexObject.getMinspace());
+        map.put("modelEnName", qinComplexObject.getModelEnName());
+        map.put("modelNumber", qinComplexObject.getModelNumber());
+        map.put("modelStuff", qinComplexObject.getModelStuff());
+        map.put("devStuff", qinComplexObject.getDevStuff());
+        map.put("modelState", qinComplexObject.getModelState());
+        map.put("mintime", qinComplexObject.getMintime());
+        map.put("minspace", qinComplexObject.getMinspace());
         map.put("requiretime", qinComplexObject.getRequiretime());
-        map.put("onlyexpression",qinComplexObject.getOnlyexpression());
-        map.put("mainIndex",qinComplexObject.getMainIndex());
-        map.put("modelLevel",qinComplexObject.getModelLevel());
-        map.put("maplist",maplist);
-        map.put("detaillist",details);
-        map.put("database",stoageDatabase.getDatabase());
-        map.put("databaseName",stoageDatabase.getDatabaseName());
-        map.put("storageCycle",stoageDatabase.getStorageCycle());
+        map.put("onlyexpression", qinComplexObject.getOnlyexpression());
+        map.put("mainIndex", qinComplexObject.getMainIndex());
+        map.put("modelLevel", qinComplexObject.getModelLevel());
+        map.put("maplist", maplist);
+        map.put("detaillist", details);
+        map.put("database", stoageDatabase.getDatabase());
+        map.put("databaseName", stoageDatabase.getDatabaseName());
+        map.put("storageCycle", stoageDatabase.getStorageCycle());
 
-        fileName = fileName+".xlsx";
+        fileName = fileName + ".xlsx";
 
-        XSSFWorkbook workbook = (XSSFWorkbook) ExcelExportUtil.exportExcel(params,map);
+        XSSFWorkbook workbook = (XSSFWorkbook) ExcelExportUtil.exportExcel(params, map);
         FileOutputStream fos = new FileOutputStream(fileName);
         workbook.write(fos);
         fos.close();
@@ -72,7 +73,7 @@ public class ExportAndInportServiceImpl implements ExportAndInportService {
         }
         InputStreamResource resource = new InputStreamResource(new FileInputStream(dbfFile));
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-disposition", "attachment;filename="+ fileName);
+        headers.add("Content-disposition", "attachment;filename=" + fileName);
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -80,7 +81,37 @@ public class ExportAndInportServiceImpl implements ExportAndInportService {
                 .contentType(MediaType.parseMediaType("application/octet-stream"))
                 .body(resource);
     }
-    private QinComplexObject data1(){
+
+    @Override
+    public List<Map> inportComplex(MultipartFile excel) throws Exception {
+        // 获取文件名
+        String fileName = excel.getOriginalFilename();
+        // 获取文件后缀
+        String prefix = fileName.substring(fileName.lastIndexOf("."));
+        UUID uuid = UUID.randomUUID();
+        // 用uuid作为文件名，防止生成的临时文件重复
+        final File excelFile = File.createTempFile(uuid.toString(), prefix);
+        // MultipartFile to File
+        excel.transferTo(excelFile);
+
+        //你的业务逻辑
+        ImportParams params = new ImportParams();
+        params.setKeyMark(":");
+        params.setReadSingleCell(true);
+        ExcelImportResult<Map> result = ExcelImportUtil.importExcelMore(
+                excelFile,
+                Map.class, params);
+        for (int i = 0; i < result.getList().size(); i++) {
+            System.out.println(result.getList().get(i));
+        }
+        System.out.println(result.getMap());
+
+        //程序结束时，删除临时文件
+        deleteFile(excelFile);
+        return result.getList();
+    }
+
+    private QinComplexObject data1() {
         QinComplexObject complexObject = new QinComplexObject();
         complexObject.setModelCnName("模型一");
         complexObject.setModelEnName("model No.1");
@@ -97,63 +128,79 @@ public class ExportAndInportServiceImpl implements ExportAndInportService {
         complexObject.setModelLevel("A");
         return complexObject;
     }
-    private List<Map<String,Object>> data2(){
+
+    private List<Map<String, Object>> data2() {
         //相应字段要与模板对应
-        List<Map<String,Object>> maplist = new ArrayList<Map<String, Object>>();
-        Map<String,Object> map1 = new HashMap<String, Object>();
-        Map<String,Object> map2 = new HashMap<String, Object>();
-        map1.put("depencemodelname","Model 1");
-        map1.put("relateDescription","这是一个相关描述一");
-        map2.put("depencemodelname","Model 2");
-        map2.put("relateDescription","这是一个相关描述二");
+        List<Map<String, Object>> maplist = new ArrayList<Map<String, Object>>();
+        Map<String, Object> map1 = new HashMap<String, Object>();
+        Map<String, Object> map2 = new HashMap<String, Object>();
+        map1.put("depencemodelname", "Model 1");
+        map1.put("relateDescription", "这是一个相关描述一");
+        map2.put("depencemodelname", "Model 2");
+        map2.put("relateDescription", "这是一个相关描述二");
         maplist.add(map1);
         maplist.add(map2);
 
         return maplist;
     }
-    private List<Map<String,Object>> data3(){
 
-        List<Map<String,Object>> maplist = new ArrayList<Map<String, Object>>();
-        Map<String,Object> map1 = new HashMap<String, Object>();
-        Map<String,Object> map2 = new HashMap<String, Object>();
-        map1.put("id","1");
-        map1.put("keys","主键一");
-        map1.put("cnMark","标识一");
-        map1.put("enMark","mark one");
-        map1.put("type","NUMBER");
-        map1.put("length","1024");
-        map1.put("unit","cm");
-        map1.put("defaut","1024");
-        map1.put("attributesExpression","属性一");
-        map1.put("datasource","数据源一");
-        map1.put("datasourceText","数据源字段一");
-        map1.put("algorithmExpression","算法描述一");
-        map1.put("function","函数一");
+    private List<Map<String, Object>> data3() {
 
-        map2.put("id","2");
-        map2.put("keys","主键二");
-        map2.put("cnMark","标识二");
-        map2.put("enMark","mark two");
-        map2.put("type","NUMBER");
-        map2.put("length","1024");
-        map2.put("unit","cm");
-        map2.put("defaut","1024");
-        map2.put("attributesExpression","属性二");
-        map2.put("datasource","数据源二");
-        map2.put("datasourceText","数据源字段二");
-        map2.put("algorithmExpression","算法描述二");
-        map2.put("function","函数二");
+        List<Map<String, Object>> maplist = new ArrayList<Map<String, Object>>();
+        Map<String, Object> map1 = new HashMap<String, Object>();
+        Map<String, Object> map2 = new HashMap<String, Object>();
+        map1.put("id", "1");
+        map1.put("keys", "主键一");
+        map1.put("cnMark", "标识一");
+        map1.put("enMark", "mark one");
+        map1.put("type", "NUMBER");
+        map1.put("length", "1024");
+        map1.put("unit", "cm");
+        map1.put("defaut", "1024");
+        map1.put("attributesExpression", "属性一");
+        map1.put("datasource", "数据源一");
+        map1.put("datasourceText", "数据源字段一");
+        map1.put("algorithmExpression", "算法描述一");
+        map1.put("function", "函数一");
+
+        map2.put("id", "2");
+        map2.put("keys", "主键二");
+        map2.put("cnMark", "标识二");
+        map2.put("enMark", "mark two");
+        map2.put("type", "NUMBER");
+        map2.put("length", "1024");
+        map2.put("unit", "cm");
+        map2.put("defaut", "1024");
+        map2.put("attributesExpression", "属性二");
+        map2.put("datasource", "数据源二");
+        map2.put("datasourceText", "数据源字段二");
+        map2.put("algorithmExpression", "算法描述二");
+        map2.put("function", "函数二");
         maplist.add(map1);
         maplist.add(map2);
 
 
         return maplist;
     }
-    private StoageDatabase data4(){
+
+    private StoageDatabase data4() {
         StoageDatabase stoageDatabase = new StoageDatabase();
         stoageDatabase.setDatabase("MySql");
         stoageDatabase.setDatabaseName("名字一");
         stoageDatabase.setStorageCycle("两天");
         return stoageDatabase;
+    }
+
+    /**
+     * 删除
+     *
+     * @param files
+     */
+    private void deleteFile(File... files) {
+        for (File file : files) {
+            if (file.exists()) {
+                file.delete();
+            }
+        }
     }
 }
