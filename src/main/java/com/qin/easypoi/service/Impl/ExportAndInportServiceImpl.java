@@ -1,66 +1,30 @@
-# springboot-easypoi
+package com.qin.easypoi.service.Impl;
 
 
-springboot 三层模型 easypoi 导入导出 excel 复杂模型
+import cn.afterturn.easypoi.excel.ExcelExportUtil;
+import cn.afterturn.easypoi.excel.entity.TemplateExportParams;
+import com.qin.easypoi.domain.DepenceModel;
+import com.qin.easypoi.domain.Detail;
+import com.qin.easypoi.domain.QinComplexObject;
+import com.qin.easypoi.domain.StoageDatabase;
+import com.qin.easypoi.service.ExportAndInportService;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 
-
-### 导出实现效果
-
-![](./pic/1.png)
-
-
-### 相关模板
-
-![](./pic/3.png)
-
-
-### 仍存在的问题 
-
-相比easyexcel 不会出现上下覆盖的问题 但是不能进行行的合并 不然会报越界错误
-
-![](./pic/2.png)
-
-### 相关代码
-
-控制层
-```java
-
-@RestController
-@RequestMapping("/exportandinport")
-public class ExportAndInportController {
-
-    @Resource
-    public ExportAndInportService exportAndInportService;
-
-    /*
-     * 导出复杂对象
-     * */
-    @GetMapping("/exportComplex")
-    public ResponseEntity<org.springframework.core.io.Resource> exportComplex(HttpServletResponse response, String fileName) throws IOException {
-
-        try {
-            return exportAndInportService.exportHorizonComplex(fileName);
-        } catch (IOException e) {
-            // 重置response
-            response.reset();
-            response.setContentType("application/json");
-            response.setCharacterEncoding("utf-8");
-            Map<String, String> map = new HashMap<String, String>();
-            map.put("status", "failure");
-            map.put("message", "下载文件失败" + e.getMessage());
-            response.getWriter().println(JSON.toJSONString(map));
-        }
-        return null;
-    }
-
-}
-
-
-```
-
-
-业务层
-```java
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ExportAndInportServiceImpl implements ExportAndInportService {
@@ -193,6 +157,3 @@ public class ExportAndInportServiceImpl implements ExportAndInportService {
         return stoageDatabase;
     }
 }
-
-
-```
